@@ -1,5 +1,6 @@
 import time
 import json
+import logging
 from RPLCD.i2c import CharLCD
 from gpiozero import OutputDevice
 from w1thermsensor import W1ThermSensor
@@ -8,50 +9,79 @@ from azure.iot.device import IoTHubDeviceClient
 
 
 class AzureIoTConnect:
+    """ Handles connection and message sending through Azure IoT Hub"""
+
     def __init__(self, config_file):
+        """
+        Initialize Azure IoT connection.
+        :param config_file: Path to configuration file with connection string.
+        """
         self.connection_string = self.load_connection_string(config_file)
         self.client = self.initialize_client()
 
     def load_connection_string(self, config_file):
+        """
+        Loads the connection string from the configuration file.
+        :param config_file: Path to configuration file with connection string.
+        :return: Connection string.
+        """
         try:
             with open(config_file, "r") as file:
                 config = json.load(file)
                 return config["IoTHubConnectionString"]
-        except FileNotFoundError:
-            print("Configuration file not found")
-            exit()
-        except KeyError:
-            print("ConnectionString not found in the configuration file")
-            exit()
+        except FileNotFoundError as e:
+            logging.error("Configuration file not found")
+            raise e
+        except KeyError as e:
+            logging.error("ConnectionString not found in the configuration file")
+            raise e
 
     def initialize_client(self):
+        """
+        Initializes the Azure IoT client.
+        :return: Azure IoT client.
+        """
         try:
             client = IoTHubDeviceClient.create_from_connection_string(self.connection_string)
             return client
-        except:
-            print("Failed to initialize Azure IoT client")
-            exit()
+        except Exception as e:
+            logging.error("Failed to initialize Azure IoT client")
+            raise e
 
     def send_message(self, message):
+        """
+        Sends message to Azure IoT Hub.
+        :param message: Message to be sent.
+        """
         try:
             self.client.send_message(json.dumps(message))
-        except:
-            print("Failed to send message to Azure IoT Hub")
+        except Exception as e:
+            logging.error("Failed to send message to Azure IoT Hub")
+            raise e
 
     @property
     def is_connected(self):
+        """
+        :return: Connection status to Azure IoT Hub.
+        """
         return self.client.connected
 
 
 class WineMacerator:
+    """ Handles the process of wine maceration """
+
     LCD_I2C_ADDRESS = 0x27
-    RELAY_DURATION_MINUTES = 1
-    MIXTURE_INTERVAL_HOURS = 0.25
-    TEMP_UPDATE_INTERVAL_MINUTES = 1
+    RELAY_DURATION_MINUTES = 2
+    MIXTURE_INTERVAL_HOURS = 6
+    TEMP_UPDATE_INTERVAL_MINUTES = 15
     MACERATION_DURATION_DAYS = 14
 
-    def __init__(self):
-        self.azure_iot = AzureIoTConnect("config.json")
+    def __init__(self, config_file_path):
+        """
+        Initializes wine macerator with given config file.
+        :param config_file_path: Path to configuration file for Azure IoT.
+        """
+        self.azure_iot = AzureIoTConnect(config_file_path)
         self.initialize_components()
         self.set_initial_times()
 
@@ -144,8 +174,14 @@ class WineMacerator:
 
 
 if __name__ == "__main__":
+    # Configure logger to not store logs locally.
+    logging.basicConfig(stream=logging.NullHandler())
+
     try:
-        macerator = WineMacerator()
+        config_file_path = "config.json"
+        macerator = WineMacerator(config_file_path)
         macerator.run()
     except Exception as e:
-        print(f"An error occurred: {e}")
+        error_message = f"An error occurred: {e}"
+        # Log error message to Azure IoT Hub.
+        AzureIoTConnect(config_file_path).send_message({"error": error_message})
