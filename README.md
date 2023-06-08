@@ -2,7 +2,7 @@
 
 Wine Macerator is a Python project that utilizes various hardware components to automate the wine maceration process. The program controls an LCD display, a temperature sensor, and a relay for mixing. It also integrates with Azure IoT Hub for remote data logging.
 
-![Wine Macerator Illustration](./wine-macerator-illustration.png)
+![Wine Macerator Illustration](https://github.com/damiancyrana/wine-maceration-driver/blob/main/maceration-device.jpg?raw=true)
 
 ## Table of Contents
 
