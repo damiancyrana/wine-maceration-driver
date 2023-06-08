@@ -116,8 +116,17 @@ class WineMacerator:
         self.display_azure_connection_status()
 
     def display_azure_connection_status(self):
+        try:
+            # Prosty test połączenia wysyłając pusty obiekt do Azure IoT Hub
+            self.azure_iot.send_message({})
+            connection_status = "OK-A"
+        except:
+            connection_status = "NO-A"
+        
+        # Wyświetl status połączenia
         self.lcd.cursor_pos = (0, 12)
-        self.lcd.write_string("OK-A" if self.azure_iot.is_connected else "NO-A")
+        self.lcd.write_string(connection_status)
+
 
     def activate_relay(self):
         self.relay.on()
